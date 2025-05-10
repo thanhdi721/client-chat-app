@@ -5,7 +5,7 @@ import avatar from "../../public/avatar.png";
 import heart from "../../public/tim.svg";
 import { useAuthStore } from "../store/useAuthStore";
 
-import { fetchAllPosts, deletePost } from "../store/usePost";
+import { fetchAllPosts, deletePost, toggleLikePost } from "../store/usePost";
 
 export default function SocialMediaPosts() {
   const [posts, setPosts] = useState([]);
@@ -13,6 +13,7 @@ export default function SocialMediaPosts() {
   const [error, setError] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [likedPosts, setLikedPosts] = useState({});
   const menuRef = useRef(null);
   const { authUser } = useAuthStore();
 
@@ -29,17 +30,85 @@ export default function SocialMediaPosts() {
     }
   };
 
+  const checkLikeStatus = async (postId) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/posts/check-like/${postId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to check like status');
+      }
+      
+      const data = await response.json();
+      return data.isLiked;
+    } catch (err) {
+      console.error('Error checking like status:', err);
+      return false;
+    }
+  };
+
+  const handleLikeToggle = async (postId) => {
+    try {
+      const isCurrentlyLiked = likedPosts[postId];
+      
+      if (isCurrentlyLiked) {
+        // If already liked, call unlike API
+        await fetch(`http://localhost:5001/api/posts/unlike/${postId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+      } else {
+        // If not liked, call like API
+        await fetch(`http://localhost:5001/api/posts/like/${postId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+      }
+      
+      // Toggle like status locally
+      setLikedPosts(prev => ({
+        ...prev,
+        [postId]: !prev[postId]
+      }));
+      
+      // Reload posts to get updated like count
+      loadPosts();
+    } catch (err) {
+      console.error('Error toggling like status:', err);
+    }
+  };
+
   const loadPosts = async () => {
     try {
       const data = await fetchAllPosts();
       setPosts(data);
+      
+      // Check like status for each post
+      const likeStatuses = {};
+      
+      for (const post of data) {
+        const isLiked = await checkLikeStatus(post.id);
+        likeStatuses[post.id] = isLiked;
+      }
+      
+      setLikedPosts(likeStatuses);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     loadPosts();
   }, []);
@@ -50,18 +119,17 @@ export default function SocialMediaPosts() {
         setOpenMenuId(null);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
+  
   if (loading) return <div className="h-[calc(100vh-120px)] flex items-center justify-center text-gray-500">Loading posts...</div>;
   if (error) return <div className="h-[calc(100vh-120px)] flex items-center justify-center text-red-500">Error: {error}</div>;
 
   return (
-    <div className="h-[calc(100vh-120px)] overflow-y-auto flex-1 flex flex-col scrollbar-hide">
+    <div className="overflow-y-auto flex-1 flex flex-col scrollbar-hide">
       <ComponentCreatePost onPostSuccess={loadPosts} />
       <div className="space-y-4 pb-4">
         {posts.map((post) => (
@@ -122,7 +190,23 @@ export default function SocialMediaPosts() {
             </div>
 
             <div className="px-2 py-1 border-t border-gray-200 flex justify-between">
-              <button className="flex-1 py-1 flex items-center justify-center"><Heart className="h-5 w-5 mr-1" />Thích</button>
+              {/* Like button with conditional rendering based on like status */}
+              <button 
+                className="flex-1 py-1 flex items-center justify-center" 
+                onClick={() => handleLikeToggle(post.id)}
+              >
+                {likedPosts[post.id] ? (
+                  <div className="flex items-center justify-center">
+                    <img src={heart} alt="heart" className="h-6 w-6 mr-1" />
+                    <span>Đã thích</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center">
+                    <Heart className="h-5 w-5 mr-1" />
+                    <span>Thích</span>
+                  </div>
+                )}
+              </button>
               <button className="flex-1 py-1 flex items-center justify-center"><MessageSquare className="h-5 w-5 mr-1" />Bình luận</button>
               <button className="flex-1 py-1 flex items-center justify-center"><Share2 className="h-5 w-5 mr-1" />Chia sẻ</button>
             </div>
