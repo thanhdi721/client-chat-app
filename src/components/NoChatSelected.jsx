@@ -1,8 +1,12 @@
-import { ThumbsUp, MessageSquare, Share2, Trash2, X } from "lucide-react";
+import { ThumbsUp, MessageSquare, Share2, Trash2, X, Heart } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import ComponentCreatePost from "./ComponentCreatePost";
 import avatar from "../../public/avatar.png";
+import heart from "../../public/tim.svg";
 import { useAuthStore } from "../store/useAuthStore";
+
+import { fetchAllPosts, deletePost } from "../store/usePost";
+
 export default function SocialMediaPosts() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,43 +14,24 @@ export default function SocialMediaPosts() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const menuRef = useRef(null);
-  const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
+  const { authUser } = useAuthStore();
+
   const handleDelete = async (postId) => {
-    if (!postId) {
-      return;
-    }
     try {
-      const authToken = localStorage.getItem('authToken'); 
-      const response = await fetch(`http://localhost:5001/api/posts/${postId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
-        },
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Delete failed:', response.status, errorData);
-        throw new Error(`Failed to delete post: ${errorData.message || response.status}`);
-      }
+      await deletePost(postId);
       setOpenMenuId(null);
-      setPosts(posts.filter(post => post.id !== postId)); 
-      await fetchPosts(); 
+      setPosts(posts.filter(post => post.id !== postId));
+      loadPosts();
     } catch (err) {
       console.error('Error deleting post:', err);
       setError(err.message);
-      
       alert('Không thể xóa bài viết người khác');
     }
   };
 
-  const fetchPosts = async () => {
+  const loadPosts = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/posts');
-      if (!response.ok) throw new Error('Failed to fetch posts');
-      const data = await response.json();
+      const data = await fetchAllPosts();
       setPosts(data);
     } catch (err) {
       setError(err.message);
@@ -56,7 +41,7 @@ export default function SocialMediaPosts() {
   };
 
   useEffect(() => {
-    fetchPosts();
+    loadPosts();
   }, []);
 
   useEffect(() => {
@@ -77,7 +62,7 @@ export default function SocialMediaPosts() {
 
   return (
     <div className="h-[calc(100vh-120px)] overflow-y-auto flex-1 flex flex-col scrollbar-hide">
-      <ComponentCreatePost onPostSuccess={fetchPosts} />
+      <ComponentCreatePost onPostSuccess={loadPosts} />
       <div className="space-y-4 pb-4">
         {posts.map((post) => (
           <div key={post.id} className="rounded-xl shadow-md overflow-hidden">
@@ -129,7 +114,7 @@ export default function SocialMediaPosts() {
             <div className="px-4 py-2 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <div className="flex items-center space-x-1">
-                  <div className="bg-blue-600 rounded-full p-1"><ThumbsUp className="h-3 w-3 text-white" /></div>
+                  <div className="rounded-full p-1"><img src={heart} alt="heart" className="h-6 w-6 text-white" /></div>
                   <span>{post.likes}</span>
                 </div>
                 <div>{post.comments} bình luận</div>
@@ -137,7 +122,7 @@ export default function SocialMediaPosts() {
             </div>
 
             <div className="px-2 py-1 border-t border-gray-200 flex justify-between">
-              <button className="flex-1 py-1 flex items-center justify-center"><ThumbsUp className="h-5 w-5 mr-1" />Thích</button>
+              <button className="flex-1 py-1 flex items-center justify-center"><Heart className="h-5 w-5 mr-1" />Thích</button>
               <button className="flex-1 py-1 flex items-center justify-center"><MessageSquare className="h-5 w-5 mr-1" />Bình luận</button>
               <button className="flex-1 py-1 flex items-center justify-center"><Share2 className="h-5 w-5 mr-1" />Chia sẻ</button>
             </div>
