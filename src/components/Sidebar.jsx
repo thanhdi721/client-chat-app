@@ -22,7 +22,7 @@ const Sidebar = () => {
 
   return (
     // Thay đổi sidebar từ dọc sang ngang trên mobile
-    <aside className="w-full md:h-full md:w-20 lg:w-72 border-t md:border-t-0 md:border-r border-base-300 flex flex-col md:flex-col transition-all duration-200 fixed top-16 left-0">
+    <aside className="w-full md:h-full md:w-20 lg:w-72 border-t md:border-t-0 md:border-r border-base-300 flex flex-col md:flex-col transition-all duration-200">
       <div className="border-b border-base-300 w-full p-3 md:p- ">
         <div className="flex items-center gap-2">
           <Users className="size-6" />
