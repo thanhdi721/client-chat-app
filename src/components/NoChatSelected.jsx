@@ -4,7 +4,7 @@ import ComponentCreatePost from "./ComponentCreatePost";
 import avatar from "../../public/avatar.png";
 import heart from "../../public/tim.svg";
 import { useAuthStore } from "../store/useAuthStore";
-
+import PopupComment from "./PopupComment";
 import { fetchAllPosts, deletePost, toggleLikePost } from "../store/usePost";
 
 export default function SocialMediaPosts() {
@@ -16,6 +16,8 @@ export default function SocialMediaPosts() {
   const [likedPosts, setLikedPosts] = useState({});
   const menuRef = useRef(null);
   const { authUser } = useAuthStore();
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [postId, setPostId] = useState(null);
 
   const handleDelete = async (postId) => {
     try {
@@ -29,7 +31,10 @@ export default function SocialMediaPosts() {
       alert('Không thể xóa bài viết người khác');
     }
   };
-
+  const handleComment = async (postId) => {
+    setPostId(postId);
+    setIsPopupOpen(true);
+  }
   const checkLikeStatus = async (postId) => {
     try {
       const response = await fetch(`http://localhost:5001/api/posts/check-like/${postId}`, {
@@ -207,7 +212,7 @@ export default function SocialMediaPosts() {
                   </div>
                 )}
               </button>
-              <button className="flex-1 py-1 flex items-center justify-center"><MessageSquare className="h-5 w-5 mr-1" />Bình luận</button>
+              <button className="flex-1 py-1 flex items-center justify-center" onClick={() => handleComment(post.id)}><MessageSquare className="h-5 w-5 mr-1"  />Bình luận</button>
               <button className="flex-1 py-1 flex items-center justify-center"><Share2 className="h-5 w-5 mr-1" />Chia sẻ</button>
             </div>
           </div>
@@ -232,6 +237,7 @@ export default function SocialMediaPosts() {
           </div>
         </div>
       )}
+      <PopupComment isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} postId={postId} />
     </div>
   );
 }
